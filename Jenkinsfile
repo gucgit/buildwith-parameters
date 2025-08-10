@@ -17,7 +17,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id'
+                    credentialsId: 'awscredentials'
                 ]]) {
                     sh 'terraform init'
                 }
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id'
+                    credentialsId: 'awscredentials'
                 ]]) {
                     sh 'terraform plan'
                 }
@@ -39,7 +39,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id'
+                    credentialsId: 'awscredentials'
                 ]]) {
                     sh 'terraform apply -auto-approve'
                 }
