@@ -4,86 +4,60 @@ pipeline {
     parameters {
         choice(
             name: 'AWS_REGION',
-            choices: [
-                'ap-south-1',     // Mumbai (default)
-                'ap-southeast-1', // Singapore
-                'ap-southeast-2', // Sydney
-                'ap-northeast-1', // Tokyo
-                'ap-northeast-2', // Seoul
-                'ap-northeast-3', // Osaka
-                'us-east-1',      // N. Virginia
-                'us-east-2',      // Ohio
-                'us-west-1',      // N. California
-                'us-west-2',      // Oregon
-                'eu-central-1',   // Frankfurt
-                'eu-west-1',      // Ireland
-                'eu-west-2',      // London
-                'eu-west-3'       // Paris
-            ],
-            description: 'Select AWS region to deploy infrastructure',
-            defaultValue: 'ap-south-1'
+            choices: ['ap-south-1', 'us-east-1', 'us-west-2'],
+            description: 'Select the AWS region to deploy resources'
+        )
+        string(
+            name: 'ENV',
+            defaultValue: 'dev',
+            description: 'Environment name (dev/test/prod)'
         )
     }
 
     environment {
-        TF_VAR_aws_region = "${params.AWS_REGION ?: 'ap-south-1'}"
+        AWS_DEFAULT_REGION = "${params.AWS_REGION}"
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Init') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/gucgit/buildwith-parameters.git'
+                script {
+                    echo "Selected AWS Region: ${params.AWS_REGION}"
+                    echo "Environment: ${params.ENV}"
+                }
             }
         }
 
         stage('Terraform Init') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'awscredentials'
-                ]]) {
-                    sh 'terraform init'
-                }
+                sh """
+                terraform init \
+                  -backend-config="region=${params.AWS_REGION}" \
+                  -backend-config="bucket=guc-vpc" \
+                  -backend-config="dynamodb_table=terraform-locks" \
+                  -backend-config="key=terraform/state.tfstate"
+                """
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'awscredentials'
-                ]]) {
-                    sh "terraform plan -var aws_region=${TF_VAR_aws_region}"
-                }
+                sh """
+                terraform plan \
+                  -var="aws_region=${params.AWS_REGION}" \
+                  -var="env=${params.ENV}"
+                """
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'awscredentials'
-                ]]) {
-                    sh "terraform apply -auto-approve -var aws_region=${TF_VAR_aws_region}"
-                }
-            }
-        }
-
-        stage('Terraform Destroy') {
-            when {
-                expression { return params.AWS_REGION != null }
-            }
-            steps {
-                input message: "Do you want to destroy resources in ${TF_VAR_aws_region}?"
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'awscredentials'
-                ]]) {
-                    sh "terraform destroy -auto-approve -var aws_region=${TF_VAR_aws_region}"
-                }
+                sh """
+                terraform apply -auto-approve \
+                  -var="aws_region=${params.AWS_REGION}" \
+                  -var="env=${params.ENV}"
+                """
             }
         }
     }
 }
-
