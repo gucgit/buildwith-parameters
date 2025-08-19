@@ -4,18 +4,25 @@ pipeline {
     parameters {
         choice(
             name: 'AWS_REGION',
-            choices: ['ap-south-1', 'us-east-1', 'us-west-2'],
-            description: 'Select the AWS region to deploy resources'
-        )
-        string(
-            name: 'ENV',
-            defaultValue: 'dev',
-            description: 'Environment name (dev/test/prod)'
+            choices: [
+                'Mumbai (ap-south-1)', 
+                'N. Virginia (us-east-1)', 
+                'Oregon (us-west-2)', 
+                'Frankfurt (eu-central-1)', 
+                'Tokyo (ap-northeast-1)',
+                'Singapore (ap-southeast-1)',
+                'Sydney (ap-southeast-2)',
+                'Ireland (eu-west-1)',
+                'Canada (ca-central-1)',
+                'São Paulo (sa-east-1)'
+            ],
+            description: 'Select the AWS region (city + code)'
         )
     }
 
     environment {
-        AWS_DEFAULT_REGION = "${params.AWS_REGION}"
+        // Extract only the region code (inside parentheses)
+        AWS_DEFAULT_REGION = "${params.AWS_REGION.split('\\(')[1].replace(')', '')}"
     }
 
     stages {
@@ -23,7 +30,7 @@ pipeline {
             steps {
                 script {
                     echo "Selected AWS Region: ${params.AWS_REGION}"
-                    echo "Environment: ${params.ENV}"
+                    echo "Region code extracted: ${AWS_DEFAULT_REGION}"
                 }
             }
         }
@@ -32,7 +39,7 @@ pipeline {
             steps {
                 sh """
                 terraform init \
-                  -backend-config="region=${params.AWS_REGION}" \
+                  -backend-config="region=${AWS_DEFAULT_REGION}" \
                   -backend-config="bucket=guc-vpc" \
                   -backend-config="dynamodb_table=terraform-locks" \
                   -backend-config="key=terraform/state.tfstate"
@@ -44,8 +51,7 @@ pipeline {
             steps {
                 sh """
                 terraform plan \
-                  -var="aws_region=${params.AWS_REGION}" \
-                  -var="env=${params.ENV}"
+                  -var="aws_region=${AWS_DEFAULT_REGION}"
                 """
             }
         }
@@ -54,8 +60,7 @@ pipeline {
             steps {
                 sh """
                 terraform apply -auto-approve \
-                  -var="aws_region=${params.AWS_REGION}" \
-                  -var="env=${params.ENV}"
+                  -var="aws_region=${AWS_DEFAULT_REGION}"
                 """
             }
         }
