@@ -21,7 +21,7 @@ pipeline {
     }
 
     environment {
-        // Extract only the region code (inside parentheses)
+        // Extract region code like "ap-south-1"
         AWS_DEFAULT_REGION = "${params.AWS_REGION.split('\\(')[1].replace(')', '')}"
     }
 
@@ -37,31 +37,31 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                sh """
+                sh '''
                 terraform init \
-                  -backend-config="region=ap-south-1" \   # ⚡ FIXED: keep backend region fixed
+                  -backend-config="region=ap-south-1" \
                   -backend-config="bucket=guc-vpc" \
                   -backend-config="dynamodb_table=terraform-locks" \
                   -backend-config="key=terraform/state.tfstate"
-                """
+                '''
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                sh """
+                sh '''
                 terraform plan \
-                  -var="aws_region=${AWS_DEFAULT_REGION}"
-                """
+                  -var="aws_region=$AWS_DEFAULT_REGION"
+                '''
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                sh """
+                sh '''
                 terraform apply -auto-approve \
-                  -var="aws_region=${AWS_DEFAULT_REGION}"
-                """
+                  -var="aws_region=$AWS_DEFAULT_REGION"
+                '''
             }
         }
     }
