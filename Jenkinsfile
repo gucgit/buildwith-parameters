@@ -39,7 +39,7 @@ pipeline {
             steps {
                 sh """
                 terraform init \
-                  -backend-config="region=${AWS_DEFAULT_REGION}" \
+                  -backend-config="region=ap-south-1" \   # ⚡ FIXED: keep backend region fixed
                   -backend-config="bucket=guc-vpc" \
                   -backend-config="dynamodb_table=terraform-locks" \
                   -backend-config="key=terraform/state.tfstate"
